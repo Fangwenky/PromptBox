@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧠 PromptBox - AI 提示词工具箱</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --success: #22c55e;
+            --warning: #f59e0b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, var(--primary), #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            margin-top: 10px;
+        }
+
+        .search-box {
+            margin-bottom: 30px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 15px 20px;
+            font-size: 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--card-bg);
+            color: var(--text);
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .categories {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+
+        .category-btn {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .category-btn:hover, .category-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .prompts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .prompt-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .prompt-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .prompt-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .prompt-card p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+
+        .tags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            padding: 4px 10px;
+            background: var(--bg);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            border-radius: 16px;
+            max-width: 800px;
+            width: 100%;
+            padding: 30px;
+            margin-top: 40px;
+            border: 1px solid var(--border);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            font-size: 1.5rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .prompt-text {
+            background: var(--bg);
+            padding: 20px;
+            border-radius: 8px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            margin-bottom: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--success);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .toast.show {
+            display: block;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧠 PromptBox</h1>
+            <p class="subtitle">AI 提示词工具箱 - 让 AI 更好地为你工作</p>
+        </header>
+
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="🔍 搜索提示词...">
+        </div>
+
+        <div class="categories" id="categories">
+            <button class="category-btn active" data-category="all">全部</button>
+            <button class="category-btn" data-category="coding">💻 编程</button>
+            <button class="category-btn" data-category="writing">✍️ 写作</button>
+            <button class="category-btn" data-category="learning">📚 学习</button>
+            <button class="category-btn" data-category="productivity">⚡ 效率</button>
+            <button class="category-btn" data-category="creative">🎨 创意</button>
+        </div>
+
+        <div class="prompts-grid" id="promptsGrid">
+            <!-- Prompts will be inserted here -->
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Title</h2>
+                <button class="close-btn" onclick="closeModal()">×</button>
+            </div>
+            <p id="modalDesc" style="color: var(--text-muted); margin-bottom: 15px;"></p>
+            <div class="prompt-text" id="modalPrompt"></div>
+            <div class="actions">
+                <button class="btn btn-primary" onclick="copyPrompt()">📋 复制</button>
+                <button class="btn btn-secondary" onclick="openInChat()">🚀 在 ChatGPT 中打开</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">已复制到剪贴板！</div>
+
+    <script>
+        const prompts = [
+            {
+                id: 1,
+                title: "🧙 代码审查专家",
+                description: "让 AI 扮演资深代码审查专家，审查代码并提供改进建议",
+                category: "coding",
+                tags: ["Code Review", "最佳实践"],
+                prompt: `你是一位资深的代码审查专家，拥有 15 年以上的软件开发经验。你的专长包括：
+- 发现代码中的潜在 bug 和安全漏洞
+- 识别代码异味和技术债务
+- 提供性能优化建议
+- 检查代码风格和可维护性
+
+请审查以下代码，指出问题并提供具体的改进建议：
+
+[在此粘贴你的代码]
+
+请按以下格式回复：
+1. 🔴 严重问题（必须修复）
+2. 🟡 警告（建议修复）
+3. 🟢 改进建议（可选）
+
+对于每个问题，请说明：
+- 位置和问题描述
+- 为什么这是问题
+- 如何修复的代码示例`
+            },
+            {
+                id: 2,
+                title: "📚 论文导师",
+                description: "帮助理解学术论文，逐段讲解专业内容",
+                category: "learning",
+                tags: ["学术", "论文"],
+                prompt: `你是一位某领域的学术导师，擅长用通俗易懂的语言解释复杂的概念。
+
+请帮我理解以下论文内容：
+
+[在此粘贴论文内容或链接]
+
+请用以下方式解释：
+1. 📖 背景：这个问题为什么重要？
+2. 🔧 方法：作者用了什么方法？
+3. 💡 核心思想：用比喻的方式解释
+4. 📊 结论：发现了什么？
+5. 🤔 我的理解：下一步我应该思考什么？
+
+请用中文回复，避免过度使用专业术语。`
+            },
+            {
+                id: 3,
+                title: "✍️ 文章润色师",
+                description: "帮你检查语法、改进表达、提升文章质量",
+                category: "writing",
+                tags: ["写作", "润色"],
+                prompt: `你是一位专业的文字编辑和写作教练，擅长提升文章质量。
+
+请帮我润色以下文章：
+
+[在此粘贴文章]
+
+请提供：
+1. 📝 整体评价（主题是否清晰、逻辑是否通顺）
+2. ✂️ 需要精简的部分
+3. 🔧 语法和用词错误
+4. 💡 改进建议
+5. ✨ 润色后的版本
+
+请用中文回复，保持原文的风格和语气。`
+            },
+            {
+                id: 4,
+                title: "🎯 面试教练",
+                description: "模拟技术面试，提供反馈和改进建议",
+                category: "productivity",
+                tags: ["面试", "求职"],
+                prompt: `你是一位资深的面试官，曾在多家科技公司担任技术面试官。
+
+请以面试官的身份向我提问，我们来模拟一次技术面试。
+
+岗位：[在此填写岗位，如：后端工程师]
+经验水平：[如：3年]
+重点领域：[如：Python, MySQL, Redis]
+
+请：
+1. 先问我一个自我介绍
+2. 逐步深入技术问题
+3. 给我思考时间
+4. 在我回答后提供反馈和改进建议
+5. 最后给出整体评价
+
+开始吧！`
+            },
+            {
+                id: 5,
+                title: "🧮 数学家教",
+                description: "一步步讲解数学题目，直到你理解为止",
+                category: "learning",
+                tags: ["数学", "教育"],
+                prompt: `你是一位耐心的数学家教，擅长用多种方法讲解题目。
+
+请帮我解决以下数学问题：
+
+[在此粘贴题目]
+
+请用以下步骤讲解：
+1. 📖 理解题目：这个问题在问什么？
+2. 🔍 分析：已知条件是什么？需要求什么？
+3. 🛠️ 解答步骤：一步步写清楚
+4. 💡 关键点：这个问题的核心是什么？
+5. 📝 举一反三：类似的题目怎么做？
+
+请用中文和数学符号回复，确保步骤清晰。`
+            },
+            {
+                id: 6,
+                title: "💡 创意头脑风暴",
+                description: "帮你在某个主题上进行创意发散",
+                category: "creative",
+                tags: ["创意", "头脑风暴"],
+                prompt: `你是一位创意总监，擅长头脑风暴和创意思维。
+
+请帮我围绕以下主题进行创意发散：
+
+主题：[在此填写你的主题]
+
+请提供：
+1. 💭 至少 10 个创意方向
+2. 🎯 每个方向的一句话描述
+3. 🌟 其中 3 个方向的详细展开
+4. 🔮 预测可能的挑战和解决方案
+
+请用中文回复，鼓励大胆创新的想法！`
+            },
+            {
+                id: 7,
+                title: "🐛 Bug 诊断师",
+                description: "描述 Bug 症状，AI 帮你定位和修复",
+                category: "coding",
+                tags: ["调试", "Bug"],
+                prompt: `你是一位经验丰富的调试专家，擅长快速定位和修复 bug。
+
+请帮我诊断以下问题：
+
+【环境信息】
+- 操作系统：
+- 编程语言：
+- 框架/库版本：
+
+【问题描述】
+[详细描述你遇到的 bug]
+
+【错误信息】
+[粘贴错误日志]
+
+【相关代码】
+[粘贴相关代码]
+
+请帮我：
+1. 🔍 可能的原因分析
+2. 🛠️ 一步步排查步骤
+3. ✅ 推荐的修复方案
+4. ⚠️ 需要注意的类似问题
+
+请用中文回复。`
+            },
+            {
+                id: 8,
+                title: "📊 数据分析师",
+                description: "帮你分析数据、解释结果、给出建议",
+                category: "productivity",
+                tags: ["数据", "分析"],
+                prompt: `你是一位资深的数据分析师，擅长从数据中发现 insights。
+
+请帮我分析以下数据：
+
+【分析目标】
+[你想要回答的问题]
+
+【数据描述】
+[描述你的数据：有哪些字段、有多少行等]
+
+【数据样本】
+[粘贴部分数据]
+
+请提供：
+1. 📈 描述性统计
+2. 🔍 关键发现
+3. 📊 可视化建议
+4. 💡 业务建议
+5. ⚠️ 注意事项
+
+请用中文回复，可以适当使用图表说明。`
+            },
+            {
+                id: 9,
+                title: "🌐 英语翻译 & 润色",
+                description: "中英互译，同时帮你改进表达",
+                category: "writing",
+                tags: ["翻译", "英语"],
+                prompt: `你是一位专业的翻译和英语写作专家。
+
+请帮我完成以下翻译任务：
+
+【翻译内容】
+[在此粘贴需要翻译的内容]
+
+【翻译方向】
+- [ ] 英译中
+- [ ] 中译英
+- [ ] 润色已有的英文
+
+请提供：
+1. 📖 翻译/润色后的版本
+2. 📝 关键词汇讲解
+3. 💡 语法点解释
+4. 🔄 如果有更好的表达方式，提供替代版本
+
+请用中文回复解释部分。`
+            },
+            {
+                id: 10,
+                title: "📋 项目规划师",
+                description: "帮你规划项目、拆分任务、管理进度",
+                category: "productivity",
+                tags: ["规划", "管理"],
+                prompt: `你是一位经验丰富的项目经理，擅长项目规划和任务拆分。
+
+请帮我规划以下项目：
+
+【项目名称】
+[项目名称]
+
+【项目目标】
+[你想要达成什么]
+
+【可用资源】
+- 时间：
+- 人员：
+- 预算：
+
+【约束条件】
+[有什么限制]
+
+请提供：
+1. 🎯 项目阶段划分
+2. 📝 每个阶段的任务清单
+3. ⏰ 时间估算
+4. ⚠️ 风险识别
+5. ✅ 关键里程碑
+
+请用中文回复，使用表格和列表使内容清晰。`
+            },
+            {
+                id: 11,
+                title: "🎓 概念解释器",
+                description: "用通俗比喻解释任何概念",
+                category: "learning",
+                tags: ["概念", "解释"],
+                prompt: `你是一位善于用比喻讲解概念的老师。
+
+请帮我理解以下概念：
+
+【概念名称】
+[你想要了解的概念]
+
+【我的背景】
+[简单介绍一下你的知识背景]
+
+请用以下方式解释：
+1. 📖 一句话定义
+2. 🎯 为什么这个概念重要？
+3. 🏠 生活中的比喻（用熟悉的东西解释）
+4. 🔧 在实际中怎么用？
+5. 🤔 有什么常见的误解？
+
+请用中文回复，让我这个外行也能听懂！`
+            },
+            {
+                id: 12,
+                title: "📝 笔记整理专家",
+                description: "帮你整理零散的笔记，形成结构化的知识",
+                category: "learning",
+                tags: ["笔记", "知识管理"],
+                prompt: `你是一位知识管理专家，擅长将零散的信息整理成结构化的知识。
+
+请帮我整理以下笔记：
+
+【原始笔记】
+[粘贴你的笔记内容]
+
+【目标】
+- [ ] 形成知识框架
+- [ ] 准备复习材料
+- [ ] 写成一篇文章
+- [ ] 其他：
+
+请提供：
+1. 🗂️ 主题分类
+2. 📋 结构化大纲
+3. ✨ 补充的关键点
+4. 📖 总结
+5. 💭 可以进一步探索的方向
+
+请用中文回复。`
+            }
+        ];
+
+        // Render prompts
+        function renderPrompts(category = 'all', search = '') {
+            const grid = document.getElementById('promptsGrid');
+            let filtered = prompts;
+
+            if (category !== 'all') {
+                filtered = filtered.filter(p => p.category === category);
+            }
+
+            if (search) {
+                const s = search.toLowerCase();
+                filtered = filtered.filter(p => 
+                    p.title.toLowerCase().includes(s) ||
+                    p.description.toLowerCase().includes(s) ||
+                    p.tags.some(t => t.toLowerCase().includes(s))
+                );
+            }
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '<div class="empty-state">没有找到匹配的提示词</div>';
+                return;
+            }
+
+            grid.innerHTML = filtered.map(p => `
+                <div class="prompt-card" onclick="openModal(${p.id})">
+                    <h3>${p.title}</h3>
+                    <p>${p.description}</p>
+                    <div class="tags">
+                        ${p.tags.map(t => `<span class="tag">${t}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Modal functions
+        function openModal(id) {
+            const prompt = prompts.find(p => p.id === id);
+            if (!prompt) return;
+
+            document.getElementById('modalTitle').textContent = prompt.title;
+            document.getElementById('modalDesc').textContent = prompt.description;
+            document.getElementById('modalPrompt').textContent = prompt.prompt;
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        function copyPrompt() {
+            const text = document.getElementById('modalPrompt').textContent;
+            navigator.clipboard.writeText(text);
+            
+            const toast = document.getElementById('toast');
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        function openInChat() {
+            const text = document.getElementById('modalPrompt').textContent;
+            const encoded = encodeURIComponent(text);
+            window.open(`https://chat.openai.com/?prompt=${encoded}`, '_blank');
+        }
+
+        // Event listeners
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const activeCategory = document.querySelector('.category-btn.active').dataset.category;
+            renderPrompts(activeCategory, e.target.value);
+        });
+
+        document.getElementById('categories').addEventListener('click', (e) => {
+            if (e.target.classList.contains('category-btn')) {
+                document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                renderPrompts(e.target.dataset.category, document.getElementById('searchInput').value);
+            }
+        });
+
+        // Close modal on outside click
+        document.getElementById('modal').addEventListener('click', (e) => {
+            if (e.target.id === 'modal') closeModal();
+        });
+
+        // Initial render
+        renderPrompts();
+    </script>
+</body>
+</html>
